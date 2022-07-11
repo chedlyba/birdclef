@@ -152,11 +152,6 @@ def prepare_soundscape_dataset(path, meta_path, json_path, n_fft=1024, hop_lengt
                 
                 while l <= aud.shape[1] :
                     audio_segment = aud[:, l - (5 * sr):l]
-                    # spectrogram = librosa.feature.melspectrogram(audio_segment,sr=sr,
-                    #                                              n_fft=n_fft, hop_length=hop_length,
-                    #                                             window='hann'
-                    #                                             ).T.tolist()
-                    
                     
                     row_id = '_'.join([str(id), str(site), str(sec)])
                     birds = train_sound_meta.loc[train_sound_meta['row_id'] == row_id]['birds'].values[0]
@@ -178,8 +173,8 @@ def prepare_soundscape_dataset(path, meta_path, json_path, n_fft=1024, hop_lengt
                             data['seconds'].append(sec)
                             print(f'Processed {j}: {str(id)}.{k}_{site}_{sec} : {birds} ')
 
-                            if (j % 500 == 0) & (j != 0):
-                                with open(f'{json_path}_{j/500}.json', 'w') as fp:
+                            if (j % 32 == 0) & (j != 0):
+                                with open(f'{json_path}_{j/32}.json', 'w') as fp:
                                     json.dump(data, fp, indent=4) 
                                     data = {
                                         'id' : [],
@@ -193,8 +188,8 @@ def prepare_soundscape_dataset(path, meta_path, json_path, n_fft=1024, hop_lengt
                     
                     sec = sec + 5
                     l = sec * sr
-                if j % 500 == 0 & j != 0:
-                    with open(f'{json_path}_{j/500}.json', 'w') as fp:
+                if j % 32 == 0 & j != 0:
+                    with open(f'{json_path}_{j/32}.json', 'w') as fp:
                         json.dump(data, fp, indent=4) 
                         data = {
                             'id' : [],
@@ -224,50 +219,59 @@ def prepare_bird_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512,
         'seconds' : []
     }
     file_count = 0
-    for i, (dirpath, dirnames, filenames) in enumerate(tqdm(os.walk(path))):
+    for i, (dirpath, dirnames, filenames) in enumerate((os.walk(path))):
         if dirpath is not dir:
             j = 0
-            for file in tqdm(filenames):
+            curr = ''
+            count = 0
+            for file in (filenames):
                 start = datetime.now()
                 bird = dirpath.split('/')[-1]
-                latitude, longitude = train_bird_meta[train_bird_meta['filename'] == file][['latitude', 'longitude']]
-                file = os.path.join(dirpath, file)
-                aud, sr = audio_util.open(file)
-                sec = 5
-                l = sec * newsr
-                print( f"Preprocessed {bird}-{file.split('/')[-1]} in {datetime.now()-start} sec" )
-                audio = audio_util.preprocess(aud, sr=sr, newsr=newsr)
-                length = audio.shape[1]
-                if length > newsr * 30:
-                    audio = audio[:, :newsr*30]
-                    length = newsr * 30
-                while l < length:
-                    j+=1
-                    audio_segment = audio[:, l - (5 * sr):l]
-                    
-                    start = datetime.now()
-                    spec = audio_util.spectro_gram(aud=audio).T.tolist()
-                    print(f'Processed {j} : {bird} in {datetime.now()-start} sec')
-                    data['spectrogram'].append(spec)
-                    data['seconds'].append(sec)
-                    data['bird'].append(bird)
-                    data['longitude'].append(longitude)
-                    data['latitude'].append(latitude)
-                    sec +=5
+                if bird == curr:
+                    count+=1
+                else:
+                    curr = bird
+                if count < 50:
+                    latitude, longitude = train_bird_meta[train_bird_meta['filename'] == file][['latitude', 'longitude']]
+                    file = os.path.join(dirpath, file)
+                    aud, sr = audio_util.open(file)
+                    sec = 5
                     l = sec * newsr
-                    if (j % 32 == 0) & (j != 0):
-                        with open(f'{json_path}_{j/32}.json', 'w') as fp:
-                            json.dump(data, fp, indent=4) 
-                            data = {
-                                'latitude' : [],
-                                'longitude' : [],
-                                'bird' : [],
-                                'spectrogram' : [],
-                                'seconds' : []
-                            }
-                            fp.close()
-                        file_count+=1 
-                        print(f'Wrote {file_count} files.')
+                    print( f"Preprocessed {bird}-{file.split('/')[-1]} in {datetime.now()-start} sec" )
+                    audio = audio_util.preprocess(aud, sr=sr, newsr=newsr)
+                    length = audio.shape[1]
+                    if length > newsr * 30:
+                        audio = audio[:, :newsr*30]
+                        length = newsr * 30
+                    while l < length:
+                        j+=1
+                        audio_segment = audio[:, l - (5 * sr):l]
+                        
+                        start = datetime.now()
+                        spec = audio_util.spectro_gram(aud=audio).T.tolist()
+                        print(f'Processed {j} : {bird} in {datetime.now()-start} sec')
+                        data['spectrogram'].append(spec)
+                        data['seconds'].append(sec)
+                        data['bird'].append(bird)
+                        data['longitude'].append(longitude)
+                        data['latitude'].append(latitude)
+                        sec +=5
+                        l = sec * newsr
+                        if (j % 32 == 0) & (j != 0):
+                            with open(f'{json_path}_{j/32}.json', 'w') as fp:
+                                json.dump(data, fp, indent=4) 
+                                data = {
+                                    'latitude' : [],
+                                    'longitude' : [],
+                                    'bird' : [],
+                                    'spectrogram' : [],
+                                    'seconds' : []
+                                }
+                                fp.close()
+                            file_count+=1 
+                            print(f'Wrote {file_count} files.')
+                else:
+                    break        
 
     print(f'{j} items processed.')
     with open(f'{json_path}_final', 'w') as fp:
@@ -281,7 +285,7 @@ def prepare_bird_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512,
                 
 if __name__ == '__main__':
 
-    #prepare_dataset(PATH, METADATA, JSON_PATH)
     start = datetime.now()
-    prepare_bird_dataset(BIRD_PATH, BIRD_METADATA, BIRD_JSON_PATH)
-    print(f'Processed ended in {(datetime.now()-start)}')
+    #prepare_soundscape_dataset(SOUND_PATH, SOUND_METADATA, SOUND_JSON_PATH, max_iter=10)
+    prepare_bird_dataset(BIRD_PATH, BIRD_METADATA, BIRD_JSON_PATH, max_iter=10)
+    print(f'Processe ended in {(datetime.now()-start)}')

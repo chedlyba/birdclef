@@ -2,7 +2,12 @@ bin
 include
 lib
 lib64
-pyvenv.cfg/
+pyvenv.cfg
 data.json/
 logs/
 run_dataset_in_bg.sh/
+share/
+bk*
+state*
+BNN.model
+*pycache*
