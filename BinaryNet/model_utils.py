@@ -108,7 +108,8 @@ class AudioClassifierBNN(nn.Module):
         x = x.view(x.shape[0], -1)
         x = SignActivation.apply(x)
         x = self.layers['fc'](x)
-        x = self.layers['bn4'](x)
+        if x.shape[0] !=1 :
+            x = self.layers['bn4'](x)
         return x
 
     def set_n_labels(self, n_labels):
@@ -253,7 +254,8 @@ class AudioClassifier(nn.Module):
         x = self.layers['ap'](x)
         x = x.view(x.shape[0], -1)
         x = self.layers['fc'](x)
-        x = self.layers['bn4'](x)
+        if x.shape[0] !=1 :
+            x = self.layers['bn4'](x)
         return x
 
 class Adam_bk(torch.optim.Optimizer):

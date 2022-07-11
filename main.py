@@ -73,7 +73,7 @@ def train(model, train_dl, lr=1e-03, epochs=50, optim=''):
         acc = correct_prediction/total_prediction
         print(f'Epoch: {epoch}, Loss: {avg_loss:.2f}, Accuracy: {acc:.2f}')
     
-    torch.save(model.state_dict, 'BNN.model')
+
 
 def get_data_split(data_path):
     print('loading dataset...')
@@ -193,13 +193,14 @@ if __name__ == '__main__':
     
     for task in data.keys():
         print(f'Training Task {task}:')
+        print('Training size: ', len(data[task]['X_train']))
         train_ds = SoundDS(data[task]['X_train'], data[task]['y_train'], mappings)
         val_ds = SoundDS(data[task]['X_val'], data[task]['y_val'], mappings)
         train_dl = DataLoader(train_ds, batch_size=32, shuffle=True)
         val_dl = DataLoader(val_ds, batch_size=32, shuffle=False)
 
         train(model, train_dl, epochs=30)
-        
+        torch.save(model.state_dict, f'model_{task}.h5')
         f1_score = F1Score(num_classes=n_labels, average='macro', multiclass=True)
         with torch.no_grad():
             pred, targets = inference(model, train_dl)
@@ -209,6 +210,7 @@ if __name__ == '__main__':
 
         f1_score = F1Score(num_classes=n_labels, average='macro', multiclass=True)
         train(modelbnn, train_dl, epochs=30, optim='meta')
+        torch.save(model.state_dict, f'model_bnn_{task}.h5')
         with torch.no_grad():
             pred, targets = inference(modelbnn, train_dl)
             score = f1_score(torch.from_numpy(pred).long(), torch.from_numpy(targets).long())
