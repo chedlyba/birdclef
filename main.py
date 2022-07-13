@@ -24,7 +24,7 @@ def load_dataset(data_path):
 
     return X, y
 
-def train(model, train_dl, lr=1e-03, epochs=50, optim=''):
+def train(model, train_dl, lr=5e-03, epochs=50, optim=''):
  
     criterion = nn.CrossEntropyLoss()
     if optim == 'meta':
@@ -73,8 +73,6 @@ def train(model, train_dl, lr=1e-03, epochs=50, optim=''):
         acc = correct_prediction/total_prediction
         print(f'Epoch: {epoch}, Loss: {avg_loss:.2f}, Accuracy: {acc:.2f}')
     
-
-
 def get_data_split(data_path):
     print('loading dataset...')
     X, y = load_dataset(data_path)
@@ -104,7 +102,7 @@ class SoundDS(Dataset):
         augmented_data = []
         augmented_data_labels = []
         for data, label in zip(x, y):
-            for _ in range(20):
+            for _ in range(35):
                 augmented_data += torch.unsqueeze((data + (torch.randn(data.shape[1], data.shape[2])-torch.mean(data))), 0)
                 augmented_data_labels.append(label)
         self.x = x
@@ -148,8 +146,8 @@ def inference(model, val_dl):
 
 if __name__ == '__main__':
     tasks = {
-        '1': [f'data_{i+1}.0.json' for i in range(15)], 
-        '2': [f'data_{i+16}.0.json' for i in range(15)]
+        '1': [f'data_{i+1}.0.json' for i in range(20)], 
+        '2': [f'data_{i+21}.0.json' for i in range(20)]
     }
 
     PATH = '/datadrive/datasets/birdclef/soundscape/'
@@ -177,7 +175,7 @@ if __name__ == '__main__':
 
             labels.append(l)
 
-    labels = [ bird for subset in labels for birds in subset for bird in birds.split()]
+    labels = [ birds.split()[0] for subset in labels for birds in subset]
     labels = pd.unique(labels).tolist() 
     print('Labels extracted : ', labels)
     
@@ -187,10 +185,10 @@ if __name__ == '__main__':
     for i, label in enumerate(labels):
         mappings[label] = i
         n_labels =1 + i
-    
+
     model = AudioClassifier(n_labels=n_labels)
     modelbnn = AudioClassifierBNN(n_labels=n_labels)
-    
+
     for task in data.keys():
         print(f'Training Task {task}:')
         print('Training size: ', len(data[task]['X_train']))
@@ -200,36 +198,39 @@ if __name__ == '__main__':
         val_dl = DataLoader(val_ds, batch_size=32, shuffle=False)
 
         train(model, train_dl, epochs=30)
-        torch.save(model.state_dict, f'model_{task}.h5')
+        torch.save(model.state_dict(), f'model_{task}.h5')
         f1_score = F1Score(num_classes=n_labels, average='macro', multiclass=True)
+        
         with torch.no_grad():
             pred, targets = inference(model, train_dl)
-            print(pred.shape, targets.shape)
             score = f1_score(torch.from_numpy(pred).long(), torch.from_numpy(targets).long())
             print(f'F1_score: {score}')
 
         f1_score = F1Score(num_classes=n_labels, average='macro', multiclass=True)
         train(modelbnn, train_dl, epochs=30, optim='meta')
-        torch.save(model.state_dict, f'model_bnn_{task}.h5')
+        torch.save(model.state_dict(), f'model_bnn_{task}.h5')
         with torch.no_grad():
             pred, targets = inference(modelbnn, train_dl)
             score = f1_score(torch.from_numpy(pred).long(), torch.from_numpy(targets).long())
             print(f'F1_score: {score}')
-    
+
+    model.load_state_dict(torch.load('model_2.h5'))
+    modelbnn.load_state_dict(torch.load('model_bnn_2.h5'))
+    f1_score = F1Score(num_classes=n_labels, average='macro', multiclass=True)
     print('Computing scores for both datasets...')
     for task in data.keys():
         print(f'Task {task}:')
-        test_ds = SoundDS(data[task]['X_test'], data[task]['y_test'], mappings)
+        test_ds = SoundDS(data[task]['X_val'], data[task]['y_val'], mappings)
         test_dl = DataLoader(test_ds, batch_size=32, shuffle=False)
 
         with torch.no_grad():
             print('Model: ')
-            pred, targets = inference(model, train_dl)
+            pred, targets = inference(model, test_dl)
             score = f1_score(torch.from_numpy(pred).long(), torch.from_numpy(targets).long())
             print(f'F1_score: {score}')
 
         with torch.no_grad():
             print('BNN: ')
-            pred, targets = inference(modelbnn, train_dl)
+            pred, targets = inference(modelbnn, test_dl)
             score = f1_score(torch.from_numpy(pred).long(), torch.from_numpy(targets).long())
             print(f'F1_score: {score}')

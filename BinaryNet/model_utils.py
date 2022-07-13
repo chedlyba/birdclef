@@ -74,14 +74,14 @@ class AudioClassifierBNN(nn.Module):
         self.hidden_layers = 4
         self.n_labels = n_labels
         self.layer_list = [
-            ( ('cv1', BinarizeConv2d(self.n_channels, 16, kernel_size=(5, 5), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn1', nn.BatchNorm2d(16)) ),
-            ( ('cv2', BinarizeConv2d(16, 64, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn2', nn.BatchNorm2d(64)) ),
-            ( ('cv3', BinarizeConv2d(64,32, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn3', nn.BatchNorm2d(32) ) ),
+            ( ('cv1', BinarizeConv2d(self.n_channels, 128, kernel_size=(5, 5), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn1', nn.BatchNorm2d(128)) ),
+            ( ('cv2', BinarizeConv2d(128, 512, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn2', nn.BatchNorm2d(512)) ),
+            ( ('cv3', BinarizeConv2d(512,128, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn3', nn.BatchNorm2d(128) ) ),
             ( ('ap', nn.AdaptiveAvgPool2d(output_size=1)) ),
-            ( ('fc', BinarizeLinearLayer(in_features=32, out_features=n_labels)) ),
+            ( ('fc', BinarizeLinearLayer(in_features=128, out_features=n_labels)) ),
             ( ('bn4', nn.BatchNorm1d(n_labels)) )
         ]
         
@@ -224,14 +224,14 @@ class AudioClassifier(nn.Module):
         self.hidden_layers = 4
         self.n_labels = n_labels
         self.layer_list= [
-            ( ('cv1', nn.Conv2d(self.n_channels, 16, kernel_size=(5, 5), stride = (2, 2), bias=False, padding=(2 ,2)))) ,
-            ( ('bn1', nn.BatchNorm2d(16)) ),
-            ( ('cv2', nn.Conv2d(16, 64, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn2', nn.BatchNorm2d(64)) ),
-            ( ('cv3', nn.Conv2d(64, 32, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn3', nn.BatchNorm2d(32)) ),
+            ( ('cv1', nn.Conv2d(self.n_channels, 128, kernel_size=(5, 5), stride = (2, 2), bias=False, padding=(2 ,2)))) ,
+            ( ('bn1', nn.BatchNorm2d(128)) ),
+            ( ('cv2', nn.Conv2d(128, 512, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn2', nn.BatchNorm2d(512)) ),
+            ( ('cv3', nn.Conv2d(512, 128, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn3', nn.BatchNorm2d(128)) ),
             ( ('ap', nn.AdaptiveAvgPool2d(output_size=1)) ),
-            ( ('fc', nn.Linear(in_features=32, out_features=n_labels)) ),
+            ( ('fc', nn.Linear(in_features=128, out_features=n_labels)) ),
             ( ('bn4', nn.BatchNorm1d(n_labels)) )
         ]
         self.layers = torch.nn.ModuleDict(OrderedDict(self.layer_list))

@@ -26,6 +26,7 @@ class AudioUtil:
         
         self.melspectrogram = transforms.MelSpectrogram(sample_rate=sr, n_fft=n_fft, hop_length=hop_len, n_mels=n_mels)
         self.amplitude_to_db = transforms.AmplitudeToDB(top_db=top_db)
+        self.spectrogram = transforms.Spectrogram(n_fft=n_fft, hop_length=hop_len)
     
     @staticmethod
     def open(audio_file):
@@ -92,7 +93,7 @@ class AudioUtil:
     
     def spectro_gram(self, aud):
         sig = aud
-        spec = self.melspectrogram(sig)
+        spec = self.spectrogram(sig)
         spec = self.amplitude_to_db(spec)
         
         return (spec)
@@ -125,7 +126,7 @@ class AudioUtil:
         
         shift_aud = self.time_shift(aud, shift_pct)
         sgram = self.spectro_gram(shift_aud)
-        aug_sgram = self.spectro_augment(sgram, max_mask_pct=max_mask_pct, n_freq_masks=n_freq_masks, n_time_masks=n_time_masks)
+        #aug_sgram = self.spectro_augment(sgram, max_mask_pct=max_mask_pct, n_freq_masks=n_freq_masks, n_time_masks=n_time_masks)
         return aug_sgram
 
 def prepare_soundscape_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512, n_mels=64, top_db=80, max_iter=100):
@@ -232,7 +233,8 @@ def prepare_bird_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512,
                 else:
                     curr = bird
                 if count < 50:
-                    latitude, longitude = train_bird_meta[train_bird_meta['filename'] == file][['latitude', 'longitude']]
+                    latitude = train_bird_meta.loc[train_bird_meta['filename'] == file]['latitude'].values[0]
+                    longitude = train_bird_meta.loc[train_bird_meta['filename'] == file]['longitude'].values[0]
                     file = os.path.join(dirpath, file)
                     aud, sr = audio_util.open(file)
                     sec = 5
@@ -280,9 +282,7 @@ def prepare_bird_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512,
         file_count+=1
     print(f'{file_count} files created.')
     
-            
-                    
-                
+                     
 if __name__ == '__main__':
 
     start = datetime.now()
