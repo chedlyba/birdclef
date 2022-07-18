@@ -17,7 +17,7 @@ SOUND_JSON_PATH = '/datadrive/datasets/birdclef/soundscape/data'
 
 BIRD_PATH = '/datadrive/datasets/birdclef/train_short_audio'
 BIRD_METADATA = '/datadrive/datasets/birdclef/train_metadata.csv'
-BIRD_JSON_PATH = '/datadrive/datasets/birdclef/bird/data'
+BIRD_JSON_PATH = '/datadrive/datasets/birdclef/bird/data_m'
 
 
 class AudioUtil:
@@ -93,7 +93,7 @@ class AudioUtil:
     
     def spectro_gram(self, aud):
         sig = aud
-        spec = self.spectrogram(sig)
+        spec = self.melspectrogram(sig)
         spec = self.amplitude_to_db(spec)
         
         return (spec)
@@ -221,8 +221,8 @@ def prepare_bird_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512,
     }
     file_count = 0
     for i, (dirpath, dirnames, filenames) in enumerate((os.walk(path))):
+        j = 0
         if dirpath is not dir:
-            j = 0
             curr = ''
             count = 0
             for file in (filenames):
@@ -242,24 +242,25 @@ def prepare_bird_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512,
                     print( f"Preprocessed {bird}-{file.split('/')[-1]} in {datetime.now()-start} sec" )
                     audio = audio_util.preprocess(aud, sr=sr, newsr=newsr)
                     length = audio.shape[1]
-                    if length > newsr * 30:
-                        audio = audio[:, :newsr*30]
-                        length = newsr * 30
+                    audio = audio_util.pad_trunc(audio, sr=newsr, max_ms=30000)
+                    length = newsr * 30
+
                     while l < length:
                         j+=1
                         audio_segment = audio[:, l - (5 * sr):l]
                         
                         start = datetime.now()
-                        spec = audio_util.spectro_gram(aud=audio).T.tolist()
-                        print(f'Processed {j} : {bird} in {datetime.now()-start} sec')
+                        spec = audio_util.spectro_gram(aud=audio_segment).T.tolist()
                         data['spectrogram'].append(spec)
                         data['seconds'].append(sec)
                         data['bird'].append(bird)
                         data['longitude'].append(longitude)
                         data['latitude'].append(latitude)
+                        print(f'Processed {j} : {bird} in {datetime.now()-start} sec')
                         sec +=5
                         l = sec * newsr
-                        if (j % 32 == 0) & (j != 0):
+                        if (j % 32 == 0) and (j != 0):
+                            start = datetime.now()
                             with open(f'{json_path}_{j/32}.json', 'w') as fp:
                                 json.dump(data, fp, indent=4) 
                                 data = {
@@ -271,7 +272,7 @@ def prepare_bird_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512,
                                 }
                                 fp.close()
                             file_count+=1 
-                            print(f'Wrote {file_count} files.')
+                            print(f'Wrote data_{j/32}.json in {datetime.now()-start}')
                 else:
                     break        
 
