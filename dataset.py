@@ -220,8 +220,8 @@ def prepare_bird_dataset(path, meta_path, json_path, n_fft=1024, hop_length=512,
         'seconds' : []
     }
     file_count = 0
+    j = 0
     for i, (dirpath, dirnames, filenames) in enumerate((os.walk(path))):
-        j = 0
         if dirpath is not dir:
             curr = ''
             count = 0
