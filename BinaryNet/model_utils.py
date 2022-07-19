@@ -74,15 +74,17 @@ class AudioClassifierBNN(nn.Module):
         self.hidden_layers = 4
         self.n_labels = n_labels
         self.layer_list = [
-            ( ('cv1', BinarizeConv2d(self.n_channels, 128, kernel_size=(5, 5), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn1', nn.BatchNorm2d(128)) ),
-            ( ('cv2', BinarizeConv2d(128, 512, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn2', nn.BatchNorm2d(512)) ),
-            ( ('cv3', BinarizeConv2d(512,128, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn3', nn.BatchNorm2d(128) ) ),
+            ( ('cv1', BinarizeConv2d(self.n_channels, 64, kernel_size=(5, 5), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn1', nn.BatchNorm2d(64)) ),
+            ( ('cv2', BinarizeConv2d(64, 128, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn2', nn.BatchNorm2d(128)) ),
+            ( ('cv3', BinarizeConv2d(128,64, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn3', nn.BatchNorm2d(64) ) ),
             ( ('ap', nn.AdaptiveAvgPool2d(output_size=1)) ),
-            ( ('fc', BinarizeLinearLayer(in_features=128, out_features=n_labels)) ),
-            ( ('bn4', nn.BatchNorm1d(n_labels)) )
+            ( ('fc1', BinarizeLinearLayer(in_features=64, out_features=32)) ),
+            ( ('bn4', nn.BatchNorm1d(32)) ),
+            ( ('fc2', BinarizeLinearLayer(in_features=32, out_features=n_labels)) ),
+            ( ('bn5', nn.BatchNorm1d(n_labels)) )
         ]
         
         self.layers = torch.nn.ModuleDict(OrderedDict(self.layer_list))
@@ -107,14 +109,17 @@ class AudioClassifierBNN(nn.Module):
         x = self.layers['ap'](x)
         x = x.view(x.shape[0], -1)
         x = SignActivation.apply(x)
-        x = self.layers['fc'](x)
+        x = self.layers['fc1'](x)
         if x.shape[0] !=1 :
             x = self.layers['bn4'](x)
+        x = self.layers['fc2'](x)
+        if x.shape[0] !=1 :
+            x = self.layers['bn5'](x)
         return x
 
     def set_n_labels(self, n_labels):
         self.n_labels = n_labels
-        self.layer_list[-1] = ('bn4', nn.BatchNorm1d(self.n_labels))
+        self.layer_list[-1] = ('bn5', nn.BatchNorm1d(self.n_labels))
         self.layers = torch.nn.ModuleDict(OrderedDict(self.layer_list))
 
 class Adam_meta(torch.optim.Optimizer):
@@ -224,15 +229,17 @@ class AudioClassifier(nn.Module):
         self.hidden_layers = 4
         self.n_labels = n_labels
         self.layer_list= [
-            ( ('cv1', nn.Conv2d(self.n_channels, 128, kernel_size=(5, 5), stride = (2, 2), bias=False, padding=(2 ,2)))) ,
-            ( ('bn1', nn.BatchNorm2d(128)) ),
-            ( ('cv2', nn.Conv2d(128, 512, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn2', nn.BatchNorm2d(512)) ),
-            ( ('cv3', nn.Conv2d(512, 128, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
-            ( ('bn3', nn.BatchNorm2d(128)) ),
+            ( ('cv1', nn.Conv2d(self.n_channels, 64, kernel_size=(5, 5), stride = (2, 2), bias=False, padding=(2 ,2)))) ,
+            ( ('bn1', nn.BatchNorm2d(64)) ),
+            ( ('cv2', nn.Conv2d(64, 128, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn2', nn.BatchNorm2d(128)) ),
+            ( ('cv3', nn.Conv2d(128, 64, kernel_size=(3, 3), stride = (2, 2), bias=False, padding=(2 ,2))) ),
+            ( ('bn3', nn.BatchNorm2d(64)) ),
             ( ('ap', nn.AdaptiveAvgPool2d(output_size=1)) ),
-            ( ('fc', nn.Linear(in_features=128, out_features=n_labels)) ),
-            ( ('bn4', nn.BatchNorm1d(n_labels)) )
+            ( ('fc1', nn.Linear(in_features=64, out_features=32)) ),
+            ( ('bn4', nn.BatchNorm1d(32)) ),
+            ( ('fc2', nn.Linear(in_features=32, out_features=n_labels)) ),
+            ( ('bn5', nn.BatchNorm1d(n_labels)) )
         ]
         self.layers = torch.nn.ModuleDict(OrderedDict(self.layer_list))
 
@@ -253,9 +260,12 @@ class AudioClassifier(nn.Module):
         x = self.layers['bn3'](x)
         x = self.layers['ap'](x)
         x = x.view(x.shape[0], -1)
-        x = self.layers['fc'](x)
+        x = self.layers['fc1'](x)
         if x.shape[0] !=1 :
             x = self.layers['bn4'](x)
+        x = self.layers['fc2'](x)
+        if x.shape[0] !=1 :
+            x = self.layers['bn5'](x)
         return x
 
 class Adam_bk(torch.optim.Optimizer):
